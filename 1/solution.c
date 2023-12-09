@@ -157,11 +157,12 @@ main(int argc, char **argv)
 	coro_sched_init();
 	/* Start several coroutines. */
     struct numbers *numbers = numbers_create();
-    long target_latency = atoi(argv[1]);
+    long overall_target_latency = atoi(argv[1]);
+    long target_latency = overall_target_latency / (argc - 1);
     for (int i = 0; i < argc - 2; i++) {
         coro_new(coroutine_func_f, my_context_new(argv[i + 2], numbers, target_latency));
     }
-
+    long start_time = getns();
 	/* Wait for all the coroutines to end. */
 	struct coro *c;
 	while ((c = coro_sched_wait()) != NULL) {
@@ -174,6 +175,7 @@ main(int argc, char **argv)
 		coro_delete(c);
 	}
 	/* All coroutines have finished. */
+    long end_time = getns();
 
 	/* IMPLEMENT MERGING OF THE SORTED ARRAYS HERE. */
     FILE *output = fopen("output", "w");
@@ -204,7 +206,11 @@ main(int argc, char **argv)
 
     numbers_free(numbers);
     free(indices);
-
-    printf("Alloc counts: %lu\n", heaph_get_alloc_count());
+    long total_time = end_time - start_time;
+    int seconds = total_time / 1000000000;
+    int millis = total_time / 1000000 % 1000;
+    int micros = total_time / 1000 % 1000;
+    printf("Alloc counts: %llu\n", heaph_get_alloc_count());
+    printf("Total time all coroutines worked %ds %dms %dus\n", seconds, millis, micros);
     return 0;
 }
